@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0b1020" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Impostor — tryb przekazywania telefonu</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#0e1530; --muted:#93a4bd; --accent:#7c3aed; --accent2:#22d3ee;
+    --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --glass:rgba(255,255,255,0.04);
+    /* bezpieczne krawędzie iOS */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    color:#e7eef8;
+    background:linear-gradient(180deg,#09132c, #071023);
+    /* padding pod notch i belkę gestów */
+    padding:calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(12px + var(--safe-left));
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .app{max-width:560px;margin:0 auto}
+  .card{
+    background:linear-gradient(180deg,var(--panel),#0a1230);
+    border-radius:20px;
+    box-shadow:0 10px 30px rgba(2,6,23,.6);
+    padding:16px;
+  }
+
+  h1{font-size:20px;margin:0 0 6px}
+  .meta{font-size:14px;color:var(--muted)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .controls{margin-top:14px;display:flex;gap:10px}
+  button{
+    border:0;border-radius:14px; padding:14px 16px; font-weight:800; color:#fff; cursor:pointer;
+    background:var(--glass); min-height:48px; font-size:17px; line-height:1;
+  }
+  button.primary{background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 8px 24px rgba(124,58,237,.18)}
+  button.secondary{background:rgba(255,255,255,.08)}
+  button.block{width:100%}
+  .settings{margin-top:12px; padding:12px; border-radius:16px; background:rgba(255,255,255,.03)}
+  .textarea{
+    width:100%; min-height:96px; resize:vertical; border:0; border-radius:12px; padding:12px;
+    color:#e7eef8; background:rgba(255,255,255,.05); font-size:16px;
+  }
+  input[type=number]{
+    width:96px; border:0; border-radius:12px; padding:12px; background:rgba(255,255,255,.08); color:#fff; font-size:16px;
+  }
+  .muted{color:var(--muted); font-size:14px}
+  .board{margin-top:12px}
+  .screen{
+    margin-top:12px; padding:20px; border-radius:16px; background:rgba(255,255,255,.04);
+    min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px
+  }
+  .word{font-size:24px; font-weight:900; letter-spacing:.6px}
+  .timer{font-weight:900}
+  .scores{display:flex; gap:10px; margin-top:10px}
+  .score{background:rgba(255,255,255,.06); padding:10px 12px; border-radius:12px; min-width:92px; text-align:center}
+
+  /* pełnoekranowe overlaye: użyj 100dvh dla iOS Safari */
+  .cover{
+    position:fixed; inset:0; background:rgba(10,15,31,.98);
+    display:none; align-items:center; justify-content:center; padding:20px;
+    z-index:40; height:100dvh; /* ważne na iOS */
+    padding-top:calc(24px + var(--safe-top));
+    padding-bottom:calc(24px + var(--safe-bottom));
+    padding-left:calc(16px + var(--safe-left));
+    padding-right:calc(16px + var(--safe-right));
+  }
+  .cover .panel{
+    max-width:560px; width:100%;
+    background:linear-gradient(180deg,var(--panel),#0a1230);
+    border-radius:22px; padding:18px 16px 16px;
+    box-shadow:0 10px 30px rgba(2,6,23,.6); text-align:center
+  }
+  .cover .big{font-size:22px; font-weight:900; margin-bottom:8px}
+  .cover .hint{color:var(--muted); font-size:15px}
+  .pass{display:none}
+  .pass .big{font-size:20px; font-weight:800}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
+
+  .lobby{display:block}
+  .game{display:none}
+  .game.active{display:block}
+  .lobby.hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="card">
+      <h1>Impostor — przekazywanie telefonu</h1>
+      <div class="meta">4 graczy · 1 impostor · bez podglądania poprzedniego ekranu</div>
+
+      <!-- LOBBY -->
+      <section id="lobby" class="lobby">
+        <div class="settings">
+          <div class="muted">(Opcjonalnie) Dodaj własne słowa — każde w nowej linii. Gra i tak ma ukrytą paczkę prawdziwych haseł.</div>
+          <textarea id="wordlist" class="textarea" placeholder="kot&#10;drzewo&#10;rower"></textarea>
+          <div class="row" style="margin-top:8px; justify-content:space-between">
+            <div>
+              <span class="muted">Czas pokazu (sek):</span> <input id="showSecs" type="number" min="5" max="60" value="15" />
+            </div>
+          </div>
+        </div>
+        <div class="controls">
+          <button id="startBtn" class="primary">Start gry</button>
+        </div>
+      </section>
+
+      <!-- GAME -->
+      <section id="game" class="game">
+        <div class="controls" style="align-items:center">
+          <button id="newRoundBtn" class="primary">Nowa runda</button>
+          <button id="endGameBtn" class="secondary">Zakończ grę (powrót do ustawień)</button>
+          <div style="flex:1"></div>
+          <div class="scores">
+            <div class="score">Impostor<br><span id="sI">0</span></div>
+            <div class="score">Inni<br><span id="sO">0</span></div>
+            <div class="score">Runda<br><span id="round">0</span></div>
+          </div>
+        </div>
+
+        <div class="board">
+          <div id="screen" class="screen">
+            Kliknij <b>Nowa runda</b>, aby wylosować hasło (to samo dla wszystkich nie-impostorów) i impostora.
+          </div>
+          <div id="impostorGuessArea" style="display:none; margin-top:10px">
+            <div class="muted">Impostor — po wysłuchaniu wszystkich wpisz zgadnięcie:</div>
+            <div class="row" style="margin-top:6px">
+              <input id="guess" placeholder="Twoje zgadnięcie..." style="flex:1; padding:12px; border-radius:12px; border:0; background:rgba(255,255,255,.08); color:#fff; font-size:16px" />
+              <button id="guessBtn" class="primary">Zgadnij</button>
+            </div>
+          </div>
+          <div id="result" class="muted" style="margin-top:10px"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Cover: odsłanianie -->
+  <div id="cover" class="cover" aria-modal="true" role="dialog">
+    <div class="panel">
+      <div class="big" id="coverTitle">Gracz 1 — kliknij, by zobaczyć</div>
+      <div class="hint">Upewnij się, że poprzedni gracz nie patrzy na ekran.</div>
+      <button id="revealBtn" class="primary block" style="margin-top:12px">Pokaż</button>
+    </div>
+  </div>
+
+  <!-- Przekazanie telefonu -->
+  <div id="pass" class="cover pass" aria-modal="true" role="dialog">
+    <div class="panel">
+      <div class="big" id="passTitle">Przekaż telefon Graczowi 2</div>
+      <div class="hint">Następny gracz kliknie, aby rozpocząć swój podgląd. Poprzednie hasło jest ukryte.</div>
+      <button id="passBtn" class="secondary block" style="margin-top:12px">Gotowe — daj telefon</button>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ELEMENTY
+  const lobby = document.getElementById('lobby');
+  const game = document.getElementById('game');
+  const startBtn = document.getElementById('startBtn');
+  const endGameBtn = document.getElementById('endGameBtn');
+  const newRoundBtn = document.getElementById('newRoundBtn');
+  const screen = document.getElementById('screen');
+  const showSecsInput = document.getElementById('showSecs');
+  const roundEl = document.getElementById('round');
+  const sI = document.getElementById('sI');
+  const sO = document.getElementById('sO');
+  const cover = document.getElementById('cover');
+  const coverTitle = document.getElementById('coverTitle');
+  const revealBtn = document.getElementById('revealBtn');
+  const pass = document.getElementById('pass');
+  const passTitle = document.getElementById('passTitle');
+  const passBtn = document.getElementById('passBtn');
+  const wordlistEl = document.getElementById('wordlist');
+  const guessArea = document.getElementById('impostorGuessArea');
+  const guessInput = document.getElementById('guess');
+  const guessBtn = document.getElementById('guessBtn');
+  const result = document.getElementById('result');
+
+  // --- Ukryta paczka prawdziwych rzeczowników (bazowa + dodatkowe) ---
+  const baseWords = [
+    "kot","pies","dom","drzewo","ogród","kwiat","pokój","kuchnia","łazienka","sypialnia",
+    "stół","krzesło","okno","drzwi","klucz","zamek","szafa","półka","łóżko","biurko",
+    "książka","gazeta","mapa","album","długopis","ołówek","kartka","zeszyt","plecak","torba",
+    "telefon","komputer","monitor","klawiatura","mysz","drukarka","aparat","kamera","głośnik","słuchawki",
+    "telewizor","pilot","radio","zegar","zegarek","kalendarz","latarka","bateria","kabel","ładowarka",
+    "but","skarpeta","spodnie","koszula","sukienka","płaszcz","kurtka","czapka","rękawiczka","szalik",
+    "okulary","kapelusz","parasolka","portfel","pieniądz","moneta","banknot","bilet","dowód","paszport",
+    "rower","hulajnoga","samochód","motocykl","autobus","pociąg","tramwaj","samolot","statek","łódź",
+    "ulica","skrzyżowanie","most","chodnik","parking","plac","rynek","park","fontanna",
+    "sklep","kawiarnia","restauracja","piekarnia","cukiernia","apteka","szpital","przychodnia","poczta","biblioteka",
+    "szkoła","klasa","nauczyciel","uczeń","tablica","kreda","gumka","linijka","temperówka","nożyczki",
+    "biuro","firma","szef","pracownik","spotkanie","projekt","umowa","rachunek","faktura","budżet",
+    "karta","terminal","paragon","reklama","plakat","ulotka","folder","baner","logo","hasło",
+    "internet","strona","konto","profil","wiadomość","komentarz","powiadomienie","plik","folder",
+    "muzyka","piosenka","koncert","teatr","film","kino","aktor","aktorka","scena","bilet",
+    "obraz","ramka","płótno","pędzel","farba","sztaluga","rzeźba","glina","wystawa","galeria",
+    "chleb","masło","ser","szynka","jajko","mleko","jogurt","kefir","mąka","cukier",
+    "sól","pieprz","olej","ocet","makaron","ryż","ziemniak","marchew","pomidor","ogórek",
+    "jabłko","banan","gruszka","śliwka","winogrono","truskawka","malina","borówka","cytryna","pomarańcza",
+    "garnek","patelnia","czajnik","piekarnik","mikrofalówka","talerz","miska","kubek","szklanka","widelec",
+    "nóż","łyżka","deska","sitko","otwieracz","korkociąg","zmywarka","lodówka","zamrażarka","okap",
+    "mydło","szampon","pasta","szczoteczka","ręcznik","papier","lustro","szafka","dywan","firanka",
+    "pralka","suszarka","odkurzacz","miotła","szufelka","wiadro","mop","ściereczka","płyn","gąbka",
+    "trawnik","konewka","wąż","grabie","łopata","taczka","nawóz","nasiono","sadzonka",
+    "krzew","tulipan","róża","kaktus","dąb","brzoza","sosna","klon","świerk",
+    "rzeka","jezioro","morze","ocean","plaża","fala","piasek","muszla","port","latarnia",
+    "góra","dolina","skała","jaskinia","las","polana","łąka","ścieżka","szlak","mostek",
+    "słońce","księżyc","gwiazda","chmura","deszcz","śnieg","grad","wiatr","tęcza","mgła",
+    "dziecko","rodzic","matka","ojciec","siostra","brat","babcia","dziadek","ciocia","wujek",
+    "kuzyn","przyjaciel","sąsiad","gość","gospodarz","kelner","kucharz","sprzedawca","kierowca","pasażer",
+    "lekarz","pielęgniarka","dentysta","strażak","policjant","nauczyciel","student","wojskowy","piłkarz","muzyk",
+    "zwierzę","ptak","ryba","owad","ssak","słoń","tygrys","lew","zebra","żyrafa",
+    "krowa","koń","owca","koza","świnia","kura","kaczka","gęś","indyk","pies",
+    "miasto","wieś","stolica","granica","państwo","mapa","globus","kompas","walizka",
+    "lotnisko","terminal","bramka","odprawa","autostrada","stacja","peron","tor",
+    "energia","prąd","gniazdko","wtyczka","bezpiecznik","żarówka","lampa","panel",
+    "sport","mecz","boisko","bramka","piłka","rakieta","kij","siatka","sędzia",
+    "zdrowie","choroba","tabletka","syrop","termometr","opatrunek","plaster","bandaż","apteczka","maska",
+    "czas","chwila","minuta","godzina","dzień","tydzień","miesiąc","rok","kalendarz",
+    "pudełko","karton","opakowanie","taśma","nożyk","zszywacz","spinacz","koperta","znaczek"
+  ];
+
+  const extraWords = [
+    "most","tunel","wiadukt","skrzydło","pasaż","aleja","bulwar","deptak","zaułek","dworzec",
+    "garaż","ratusz","urząd","sąd","komenda","pomnik","obelisk","mural","bohater","turysta",
+    "przewodnik","pilot","stewardesa","strażnik","ogrodnik","kwiaciarnia","warzywniak","supermarket","targ","bazar",
+    "stoisko","kasa","bank","bankomat","sejf","skarbiec","waluta","kantor","kurs","płatność",
+    "księgowy","analityk","programista","tester","projektant","inżynier","magazynier","kurier","listonosz","paczka",
+    "adres","trampek","sandał","pantofel","obcas","sznurówka","podeszwa","kapcie","kalosz","strzykawka",
+    "igła","opaska","gips","nosze","wózek","kołdra","poduszka","poszewka","prześcieradło","zasłona",
+    "karnisz","żaluzja","roleta","markiza","moskitiera","balustrada","poręcz","barierka","ogrodzenie","brama",
+    "furtka","zawias","klamka","wizjer","dzwonek","domofon","gniazdo","przedłużacz","listwa zasilająca","rozdzielnia",
+    "licznik","miernik","woltomierz","amperomierz","pędzel","wałek","szpachelka","folia","taśma malarska","grunt",
+    "lakier","wiertarka","wkrętarka","śrubokręt","śruba","nakrętka","kołek","hak","młotek","kombinerki",
+    "piła","wyrzynarka","poziomica","miarka","kątownik","imadło","rowerzysta","łańcuch","kierownica","hamulec",
+    "dzwonek","przerzutka","błotnik","siodełko","pompka","trójkąt","gaśnica","kamizelka","opona","felga",
+    "zderzak","ławka","fotel","kanapa","narożnik","pufa","komoda","kredens","toaletka","szuflada",
+    "uchwyt","zatrzask","kluczyk","brelok","notes","terminarz","pisak","zakreślacz","cyrkiel","ekierka",
+    "kątomierz","papier milimetrowy","blok","rysunek","śniadanie","obiad","kolacja","przekąska","deser","zupa",
+    "naleśnik","pieróg","kotlet","gulasz","sałatka","surówka","kapusta","ogórki kiszone","fasolka","groch",
+    "napój","woda","sok","herbata","kawa","kakao","lemoniada","kompot","koktajl","smoothie",
+    "lody","gałka","rożek","pucharek","polewa","posypka","czekolada","biżuteria","pierścionek","obrączka",
+    "kolczyk","naszyjnik","bransoletka","łańcuszek","broszka","wisiorek","zawieszka","budzik","minutnik","planer",
+    "magnes","gospodarstwo","obora","stodoła","kurnik","karmnik","poidło","pasza","siano","ciągnik",
+    "pług","brona","siewnik","kosiarka","prasa","zgrabiarka","rozrzutnik","ładowacz","przyczepa","staw",
+    "oczko","strumień","potok","wodospad","bagno","mokradło","pustynia","oaza","wydma","dżungla",
+    "tundra","tajga","step","sawanna","archipelag","półwysep","wyspa","cieśnina","zatoka","przylądek",
+    "rafineria","huta","kopalnia","elektrownia","ciepłownia","oczyszczalnia","laboratorium","probówka","pipeta","kolba",
+    "wirówka","inkubator","dygestorium","bibliotekarz","archiwista","konserwator","kasjer","recepcjonista","portier","ochroniarz",
+    "ratownik","instruktor","trener","kibic","widownia","publiczność","kolejka","gramofon","płyta","winyl",
+    "kaseta","odtwarzacz","projektor","ekran","kurtyna","reflektor","statyw","adapter","przejściówka","pianino",
+    "fortepian","skrzypce","wiolonczela","altówka","klarnet","obój","fagot","saksofon","trąbka","puzon",
+    "tuba","waltornia","lira","harfa","cytra","dres","koszulka","spodenki","opaska","frotka",
+    "plecak","nerka","teczka","aktówka","walizka kabinowa","pokrowiec","etui","futerał","ładowarka indukcyjna","powerbank",
+    "router","modem","pendrive","karta pamięci","dysk","skaner","ploter","imbus","nasadka","grzechotka",
+    "ponton","kajak","canoe","żaglówka","jachcik","kotwica","cumka","keja","molo","lornetka",
+    "teleskop","luneta","busola","astrolabium","sekstant","mapnik","piórnik","tuba na rysunki","gumka chlebowa","wkład",
+    "temperówka kieszonkowa","spinacz biurowy","zszywacz mini","wafel","baton","ciastko","herbatnik","piernik","pączek","rogalik",
+    "gwizdek","scyzoryk","krzesiwo","ruszt","kociołek","menażka","termos","manierka","peleryna","parka",
+    "anorak","bezrękawnik","pas","sakwa"
+  ];
+
+  const hiddenWords = (() => {
+    const set = new Set(
+      baseWords.concat(extraWords).map(w => (w || "").toString().trim()).filter(Boolean)
+    );
+    return Array.from(set);
+  })();
+
+  let round = 0; let scores = {I:0,O:0};
+  let secretWord = null; let impostor = null; let currentPlayer = 1; let revealed = {1:false,2:false,3:false,4:false};
+  let timerInt = null; let timeLeft = 0;
+  let inGame = false;
+
+  function buildPool(){
+    const user = wordlistEl.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    return (user.length ? user : []).concat(hiddenWords);
+  }
+  function rnd(n){ return Math.floor(Math.random()*n); }
+
+  function enterGame(){
+    inGame = true;
+    lobby.classList.add('hidden');
+    game.classList.add('active');
+    wordlistEl.setAttribute('disabled','disabled');
+    // przewiń do góry (iOS czasem zostawia pasek)
+    window.scrollTo({top:0, behavior:"smooth"});
+  }
+  function exitGame(){
+    inGame = false;
+    lobby.classList.remove('hidden');
+    game.classList.remove('active');
+    wordlistEl.removeAttribute('disabled');
+    screen.innerHTML = 'Kliknij <b>Nowa runda</b>, aby wylosować hasło (to samo dla wszystkich nie-impostorów) i impostora.';
+    guessArea.style.display='none'; result.textContent='';
+  }
+
+  function startRound(){
+    if (!inGame) enterGame();
+    const pool = buildPool();
+    secretWord = pool[rnd(pool.length)];
+    impostor = rnd(4)+1;
+    currentPlayer = 1; revealed = {1:false,2:false,3:false,4:false};
+    round++; roundEl.textContent = round; result.textContent = ''; guessArea.style.display='none'; guessInput.value='';
+    screen.innerHTML = `Zaczynamy rundę. <b>Gracz ${currentPlayer}</b> przygotuj się.`;
+    showCoverFor(currentPlayer);
+  }
+
+  function showCoverFor(p){
+    coverTitle.textContent = `Gracz ${p} — kliknij, by zobaczyć`;
+    cover.style.display = 'flex';
+  }
+
+  function revealFor(p){
+    cover.style.display = 'none';
+    const secs = clamp(parseInt(showSecsInput.value)||15,5,60);
+    let content;
+    if (p === impostor){
+      content = `<div class="word danger">JESTEŚ IMPOSTOREM</div><div class="muted" style="margin-top:6px">Nie mów hasła. Spróbuj je odgadnąć po podpowiedziach innych. Masz <b>${secs}s</b>.</div>`;
+    } else {
+      content = `<div class="word">${escapeHTML(secretWord)}</div><div class="muted" style="margin-top:6px">Powiedz słowo podobne (bez zdradzania hasła). Masz <b>${secs}s</b>.</div>`;
+    }
+    content += `<div style="margin-top:12px; display:flex; gap:8px; justify-content:center">
+                  <button id="nextBtn" class="secondary">Next</button>
+                </div>`;
+    screen.innerHTML = content;
+    revealed[p] = true;
+    startCountdown(secs, p);
+
+    const nextBtn = document.getElementById('nextBtn');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        clearInterval(timerInt);
+        hideAndPass(p);
+      });
+    }
+  }
+
+  function startCountdown(secs, p){
+    clearInterval(timerInt); timeLeft = secs; updateTimer();
+    timerInt = setInterval(()=>{
+      timeLeft--; updateTimer();
+      if (timeLeft<=0){
+        clearInterval(timerInt);
+        hideAndPass(p);
+      }
+    },1000);
+  }
+
+  function updateTimer(){
+    const t = `<div class="muted" style="margin-top:6px">Pozostało: <span class="timer">${timeLeft}s</span></div>`;
+    if (!screen.innerHTML.includes('Pozostało:')) screen.innerHTML += t; else {
+      screen.innerHTML = screen.innerHTML.replace(/(Pozostało: <span class="timer">)(\d+)(s<\/span>)/, `$1${Math.max(0,timeLeft)}$3`);
+    }
+  }
+
+  function hideAndPass(p){
+    screen.innerHTML = `<div class="muted">Czas gracza ${p} minął (lub Next). Hasło zostało ukryte.</div>`;
+    const next = p<4? p+1 : null;
+    if (next){
+      passTitle.textContent = `Przekaż telefon Graczowi ${next}`; pass.style.display='flex';
+    } else {
+      guessArea.style.display = 'block';
+      screen.innerHTML = `<b>Koniec podpowiedzi.</b> Teraz impostor wpisuje zgadnięcie.`;
+    }
+  }
+
+  function passToNext(){
+    const next = currentPlayer+1; pass.style.display='none';
+    currentPlayer = next; showCoverFor(currentPlayer);
+  }
+
+  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
+  function escapeHTML(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+  function handleGuess(){
+    const g = (guessInput.value||'').trim(); if (!g){ alert('Wpisz zgadnięcie.'); return; }
+    const ok = g.localeCompare(secretWord,'pl',{sensitivity:'base'})===0;
+    if (ok) { scores.I += 1; result.innerHTML = `<b class="ok">Impostor zgadł!</b> Hasło: <b>${escapeHTML(secretWord)}</b>`; }
+    else { scores.O += 1; result.innerHTML = `<b class="warn">Impostor nie trafił.</b> Twoje: <b>${escapeHTML(g)}</b> · Hasło: <b>${escapeHTML(secretWord)}</b>`; }
+    sI.textContent = scores.I; sO.textContent = scores.O;
+    secretWord = null; impostor = null; currentPlayer = 1;
+  }
+
+  // Zdarzenia
+  startBtn?.addEventListener('click', enterGame);
+  endGameBtn?.addEventListener('click', exitGame);
+  newRoundBtn.addEventListener('click', startRound);
+  revealBtn.addEventListener('click', ()=>{ revealFor(currentPlayer); });
+  passBtn.addEventListener('click', passToNext);
+  guessBtn.addEventListener('click', handleGuess);
+})();
+</script>
+<script>
+    window.addEventListener('load', () => {
+      const cover = document.getElementById('cover');
+      const pass = document.getElementById('pass');
+      if (cover) cover.style.display = 'none';
+      if (pass) pass.style.display = 'none';
+    });
+    </script>
+</body>
+</html>
