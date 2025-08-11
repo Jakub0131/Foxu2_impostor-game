@@ -6,147 +6,243 @@
 <meta name="theme-color" content="#0b1020" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>Impostor — tryb przekazywania telefonu</title>
+<title>Impostor — przekazywanie telefonu</title>
 <style>
   :root{
     --bg:#0b1020; --panel:#0e1530; --muted:#93a4bd; --accent:#7c3aed; --accent2:#22d3ee;
-    --ok:#10b981; --warn:#f59e0b; --danger:#ef4444; --glass:rgba(255,255,255,0.04);
-    /* bezpieczne krawędzie iOS */
+    --danger1:#ef4444; --danger2:#f97316; --glass:rgba(255,255,255,0.08);
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
   }
-
   *{box-sizing:border-box}
   html,body{height:100%}
   html{-webkit-text-size-adjust:100%}
   body{
-    margin:0;
+    margin:0; color:#e7eef8;
     font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-    color:#e7eef8;
-    background:linear-gradient(180deg,#09132c, #071023);
-    /* padding pod notch i belkę gestów */
-    padding:calc(8px + var(--safe-top)) calc(12px + var(--safe-right)) calc(8px + var(--safe-bottom)) calc(12px + var(--safe-left));
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
+    background:linear-gradient(180deg,#09132c,#071023);
+    padding:calc(10px + var(--safe-top)) calc(14px + var(--safe-right)) calc(10px + var(--safe-bottom)) calc(14px + var(--safe-left));
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+    min-height:100dvh; display:flex; align-items:stretch; justify-content:center;
   }
 
-  .app{max-width:560px;margin:0 auto}
+  .app{width:100%; max-width:620px; display:flex}
   .card{
     background:linear-gradient(180deg,var(--panel),#0a1230);
-    border-radius:20px;
-    box-shadow:0 10px 30px rgba(2,6,23,.6);
-    padding:16px;
+    border-radius:22px; box-shadow:0 10px 30px rgba(2,6,23,.6);
+    padding:16px; flex:1; display:flex; flex-direction:column; min-height:calc(100dvh - 2*(10px + var(--safe-bottom)));
   }
+  header{padding-bottom:6px}
+  h1{font-size:20px; margin:0 0 6px}
+  .meta{font-size:14px; color:var(--muted)}
+  .content{flex:1; display:flex; flex-direction:column; min-height:0}
 
-  h1{font-size:20px;margin:0 0 6px}
-  .meta{font-size:14px;color:var(--muted)}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .controls{margin-top:14px;display:flex;gap:10px}
-  button{
-    border:0;border-radius:14px; padding:14px 16px; font-weight:800; color:#fff; cursor:pointer;
-    background:var(--glass); min-height:48px; font-size:17px; line-height:1;
-  }
-  button.primary{background:linear-gradient(90deg,var(--accent),var(--accent2)); box-shadow:0 8px 24px rgba(124,58,237,.18)}
-  button.secondary{background:rgba(255,255,255,.08)}
-  button.block{width:100%}
-  .settings{margin-top:12px; padding:12px; border-radius:16px; background:rgba(255,255,255,.03)}
-  .textarea{
-    width:100%; min-height:96px; resize:vertical; border:0; border-radius:12px; padding:12px;
-    color:#e7eef8; background:rgba(255,255,255,.05); font-size:16px;
-  }
-  input[type=number]{
-    width:96px; border:0; border-radius:12px; padding:12px; background:rgba(255,255,255,.08); color:#fff; font-size:16px;
-  }
+  /* LOBBY */
+  .settings{margin-top:10px; padding:12px; border-radius:16px; background:rgba(255,255,255,.05)}
+  .textarea{width:100%; min-height:120px; resize:vertical; border:0; border-radius:14px; padding:12px; color:#e7eef8; background:rgba(255,255,255,.08); font-size:16px}
+  input[type=number]{width:120px; border:0; border-radius:14px; padding:14px; background:rgba(255,255,255,.10); color:#fff; font-size:17px}
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
   .muted{color:var(--muted); font-size:14px}
-  .board{margin-top:12px}
-  .screen{
-    margin-top:12px; padding:20px; border-radius:16px; background:rgba(255,255,255,.04);
-    min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:10px
-  }
-  .word{font-size:24px; font-weight:900; letter-spacing:.6px}
-  .timer{font-weight:900}
-  .scores{display:flex; gap:10px; margin-top:10px}
-  .score{background:rgba(255,255,255,.06); padding:10px 12px; border-radius:12px; min-width:92px; text-align:center}
 
-  /* pełnoekranowe overlaye: użyj 100dvh dla iOS Safari */
+  /* PRZYCISKI + mikro-animacje */
+  .controls{margin-top:16px; display:flex; gap:12px; flex-wrap:wrap}
+  .mainActions{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; width:100%}
+  @media (max-width:460px){ .mainActions{grid-template-columns:1fr} }
+  button{
+    position:relative; overflow:hidden;
+    border:0; border-radius:16px;
+    padding:18px 20px;
+    min-height:64px; line-height:1; font-size:18px; font-weight:800; letter-spacing:.2px;
+    color:#fff; cursor:pointer; background:var(--glass);
+    transform:translateZ(0); transition:transform .08s ease, box-shadow .12s ease, background .2s ease, filter .2s ease;
+    box-shadow:0 6px 18px rgba(2,6,23,.24), inset 0 0 0 1px rgba(255,255,255,.06);
+  }
+  button.primary{
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    background-size:200% 200%; animation:gradmove 5s linear infinite;
+    box-shadow:0 10px 28px rgba(34,211,238,.18), 0 6px 18px rgba(124,58,237,.22);
+  }
+  /* NOWY animowany gradient dla Zakończ grę */
+  button.dangerGrad{
+    background:linear-gradient(90deg,var(--danger1),var(--danger2));
+    background-size:200% 200%; animation:gradmove 4.5s linear infinite;
+    box-shadow:0 10px 28px rgba(239,68,68,.18), 0 6px 18px rgba(249,115,22,.22);
+  }
+  button.block{width:100%}
+  button:active{transform:translateY(1px) scale(.985); filter:brightness(.98)}
+  button:focus-visible{outline:2px solid rgba(34,211,238,.7); outline-offset:2px}
+  /* efekt fali na klik */
+  button::after{
+    content:""; position:absolute; inset:-40%; background:radial-gradient(closest-side, rgba(255,255,255,.18), transparent 60%);
+    transform:scale(0); opacity:0; transition:transform .3s ease, opacity .45s ease;
+  }
+  button:active::after{transform:scale(1); opacity:1}
+  @keyframes gradmove{ 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+
+  /* EKRAN GRY */
+  .board{margin-top:12px; display:flex; flex-direction:column; gap:12px; min-height:0}
+  .screen{
+    flex:1; min-height:320px;
+    display:flex; gap:16px; align-items:center; justify-content:center; text-align:center;
+    background:rgba(255,255,255,.06); border-radius:18px; padding:18px;
+  }
+  .screenInner{display:flex; flex-direction:column; gap:14px; align-items:center; justify-content:center; max-width:85%;
+    animation:fadeSlide .35s ease both}
+  @keyframes fadeSlide{
+    from{opacity:0; transform:translateY(6px)}
+    to{opacity:1; transform:translateY(0)}
+  }
+  .word{font-size:28px; font-weight:900; letter-spacing:.6px}
+  .danger{color:var(--danger1)}
+
+  /* KOŁOWY TIMER */
+  .timerWrap{display:flex; align-items:center; justify-content:center}
+  .timer{width:100px; height:100px; position:relative}
+  .timer svg{display:block; width:100%; height:100%; transform:rotate(-90deg)}
+  .timer .bg{stroke:rgba(255,255,255,.16); stroke-width:11; fill:none}
+  .timer .fg{stroke:url(#grad); stroke-linecap:round; stroke-width:11; fill:none; transition:stroke-dashoffset .2s linear}
+  .timer .center{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; color:var(--muted)}
+
+  /* BANNER RUNDY — szeroko i na środku + delikatny puls */
+  .roundBanner{
+    width:100%;
+    text-align:center;
+    background:rgba(255,255,255,.10);
+    border-radius:16px;
+    padding:14px 16px;
+    font-size:20px; font-weight:900; letter-spacing:.5px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    animation:subtlePulse 3.5s ease-in-out infinite;
+  }
+  @keyframes subtlePulse{
+    0%,100%{transform:translateZ(0) scale(1)}
+    50%{transform:translateZ(0) scale(1.01)}
+  }
+
+  /* OVERLAYE */
   .cover{
-    position:fixed; inset:0; background:rgba(10,15,31,.98);
-    display:none; align-items:center; justify-content:center; padding:20px;
-    z-index:40; height:100dvh; /* ważne na iOS */
-    padding-top:calc(24px + var(--safe-top));
-    padding-bottom:calc(24px + var(--safe-bottom));
-    padding-left:calc(16px + var(--safe-left));
-    padding-right:calc(16px + var(--safe-right));
+    position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center;
+    background:rgba(7,12,26,.98); height:100dvh;
+    padding:calc(24px + var(--safe-top)) calc(16px + var(--safe-right)) calc(24px + var(--safe-bottom)) calc(16px + var(--safe-left));
   }
-  .cover .panel{
-    max-width:560px; width:100%;
-    background:linear-gradient(180deg,var(--panel),#0a1230);
-    border-radius:22px; padding:18px 16px 16px;
-    box-shadow:0 10px 30px rgba(2,6,23,.6); text-align:center
-  }
+  .cover .panel{max-width:560px; width:100%; background:linear-gradient(180deg,var(--panel),#0a1230); border-radius:22px; padding:18px; text-align:center; box-shadow:0 10px 30px rgba(2,6,23,.6)}
   .cover .big{font-size:22px; font-weight:900; margin-bottom:8px}
   .cover .hint{color:var(--muted); font-size:15px}
   .pass{display:none}
-  .pass .big{font-size:20px; font-weight:800}
-  .ok{color:var(--ok)} .warn{color:var(--warn)} .danger{color:var(--danger)}
 
   .lobby{display:block}
   .game{display:none}
   .game.active{display:block}
   .lobby.hidden{display:none}
+
+  /* Animacja „Gra trwa” — fala */
+  .inProgress{
+    position:relative; overflow:hidden;
+    border-radius:14px;
+    background:rgba(255,255,255,.08);
+    padding:16px 18px; margin-top:8px;
+    font-weight:900; letter-spacing:.6px; font-size:20px;
+    width:min(420px, 90%);
+  }
+  .inProgress::before{
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(120px 60px at 0% 50%, rgba(124,58,237,.25), transparent 70%),
+      linear-gradient(90deg, rgba(255,255,255,.06) 20%, rgba(255,255,255,.18) 40%, rgba(255,255,255,.06) 60%);
+    background-size: 200% 100%, 200% 100%;
+    mix-blend-mode:screen; opacity:.7;
+    animation:waveMove 2.2s linear infinite;
+  }
+  @keyframes waveMove{
+    0%{ background-position: 0% 50%, 0% 0% }
+    100%{ background-position: 200% 50%, 200% 0% }
+  }
+
+  /* SPLASH przy starcie gry */
+  .splash{
+    position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+    background:radial-gradient(1200px 1200px at 50% -20%, rgba(124,58,237,.18), transparent 70%), #070c1a;
+    overflow:hidden;
+  }
+  .splash.active{display:flex; animation:splashFade .25s ease both}
+  .splash .blob{
+    position:absolute; width:160vmax; height:160vmax; border-radius:50%;
+    background:conic-gradient(from 0deg, var(--accent), var(--accent2), var(--accent), var(--accent2));
+    filter:blur(80px); animation:spinBlob 1.2s linear infinite;
+    opacity:.35;
+  }
+  .splash .title{
+    position:relative; font-weight:900; letter-spacing:.6px; font-size:28px; text-align:center;
+    background:linear-gradient(90deg,#fff,#bdeaff); -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:titlePop .9s ease both;
+  }
+  @keyframes spinBlob{ to{transform:rotate(360deg)} }
+  @keyframes titlePop{ from{opacity:0; transform:translateY(8px) scale(.98)} to{opacity:1; transform:translateY(0) scale(1)} }
+  @keyframes splashFade{ from{opacity:0} to{opacity:1} }
 </style>
 </head>
 <body>
   <div class="app">
     <div class="card">
-      <h1>Impostor — przekazywanie telefonu</h1>
-      <div class="meta">4 graczy · 1 impostor · bez podglądania poprzedniego ekranu</div>
+      <header>
+        <h1>Impostor</h1>
+        <div class="meta">By Foxu</div>
+      </header>
 
-      <!-- LOBBY -->
-      <section id="lobby" class="lobby">
-        <div class="settings">
-          <div class="muted">(Opcjonalnie) Dodaj własne słowa — każde w nowej linii. Gra i tak ma ukrytą paczkę prawdziwych haseł.</div>
-          <textarea id="wordlist" class="textarea" placeholder="kot&#10;drzewo&#10;rower"></textarea>
-          <div class="row" style="margin-top:8px; justify-content:space-between">
-            <div>
-              <span class="muted">Czas pokazu (sek):</span> <input id="showSecs" type="number" min="5" max="60" value="15" />
+      <main class="content">
+        <!-- LOBBY -->
+        <section id="lobby" class="lobby">
+          <div class="settings">
+            <textarea id="wordlist" class="textarea" placeholder="wklej swoje hasła — po jednym w linii"></textarea>
+            <div class="row" style="margin-top:10px">
+              <div><span class="muted">Czas pokazu (sek):</span> <input id="showSecs" type="number" min="5" max="60" value="15" /></div>
+              <div><span class="muted">Liczba graczy (3–10):</span> <input id="playersCount" type="number" min="3" max="10" value="4" /></div>
+              <div><span class="muted">Czas gry (min):</span> <input id="gameMinutes" type="number" min="1" max="240" value="15" /></div>
             </div>
           </div>
-        </div>
-        <div class="controls">
-          <button id="startBtn" class="primary">Start gry</button>
-        </div>
-      </section>
-
-      <!-- GAME -->
-      <section id="game" class="game">
-        <div class="controls" style="align-items:center">
-          <button id="newRoundBtn" class="primary">Nowa runda</button>
-          <button id="endGameBtn" class="secondary">Zakończ grę (powrót do ustawień)</button>
-          <div style="flex:1"></div>
-          <div class="scores">
-            <div class="score">Impostor<br><span id="sI">0</span></div>
-            <div class="score">Inni<br><span id="sO">0</span></div>
-            <div class="score">Runda<br><span id="round">0</span></div>
+          <div class="controls">
+            <button id="startBtn" class="primary block">Start gry</button>
           </div>
-        </div>
+        </section>
 
-        <div class="board">
-          <div id="screen" class="screen">
-            Kliknij <b>Nowa runda</b>, aby wylosować hasło (to samo dla wszystkich nie-impostorów) i impostora.
-          </div>
-          <div id="impostorGuessArea" style="display:none; margin-top:10px">
-            <div class="muted">Impostor — po wysłuchaniu wszystkich wpisz zgadnięcie:</div>
-            <div class="row" style="margin-top:6px">
-              <input id="guess" placeholder="Twoje zgadnięcie..." style="flex:1; padding:12px; border-radius:12px; border:0; background:rgba(255,255,255,.08); color:#fff; font-size:16px" />
-              <button id="guessBtn" class="primary">Zgadnij</button>
+        <!-- GAME -->
+        <section id="game" class="game">
+          <div class="roundBanner">Runda <span id="round">0</span></div>
+
+          <div class="controls" style="align-items:center">
+            <div class="mainActions">
+              <button id="newRoundBtn" class="primary">Nowa runda</button>
+              <button id="endGameBtn" class="dangerGrad">Zakończ grę</button>
             </div>
           </div>
-          <div id="result" class="muted" style="margin-top:10px"></div>
-        </div>
-      </section>
+
+          <div class="board">
+            <div id="screen" class="screen">
+              <div class="timerWrap">
+                <div class="timer" aria-live="polite" title="Licznik">
+                  <svg viewBox="0 0 100 100" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0" stop-color="#7c3aed"/>
+                        <stop offset="1" stop-color="#22d3ee"/>
+                      </linearGradient>
+                    </defs>
+                    <circle class="bg" cx="50" cy="50" r="42"></circle>
+                    <circle class="fg" id="timerArc" cx="50" cy="50" r="42" stroke-dasharray="264" stroke-dashoffset="264"></circle>
+                  </svg>
+                  <div class="center" id="timerLabel">—</div>
+                </div>
+              </div>
+
+              <div class="screenInner" id="screenInner">
+                Kliknij <b>Nowa runda</b>, aby wylosować hasło i impostora.
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 
@@ -155,7 +251,7 @@
     <div class="panel">
       <div class="big" id="coverTitle">Gracz 1 — kliknij, by zobaczyć</div>
       <div class="hint">Upewnij się, że poprzedni gracz nie patrzy na ekran.</div>
-      <button id="revealBtn" class="primary block" style="margin-top:12px">Pokaż</button>
+      <button id="revealBtn" class="primary block">Pokaż</button>
     </div>
   </div>
 
@@ -164,8 +260,14 @@
     <div class="panel">
       <div class="big" id="passTitle">Przekaż telefon Graczowi 2</div>
       <div class="hint">Następny gracz kliknie, aby rozpocząć swój podgląd. Poprzednie hasło jest ukryte.</div>
-      <button id="passBtn" class="secondary block" style="margin-top:12px">Gotowe — daj telefon</button>
+      <button id="passBtn" class="secondary block">Gotowe — daj telefon</button>
     </div>
+  </div>
+
+  <!-- SPLASH przy starcie gry -->
+  <div id="splash" class="splash" aria-hidden="true">
+    <div class="blob"></div>
+    <div class="title">Start!</div>
   </div>
 
 <script>
@@ -176,11 +278,16 @@
   const startBtn = document.getElementById('startBtn');
   const endGameBtn = document.getElementById('endGameBtn');
   const newRoundBtn = document.getElementById('newRoundBtn');
-  const screen = document.getElementById('screen');
+
+  const screenInner = document.getElementById('screenInner');
+  const timerArc = document.getElementById('timerArc');
+  const timerLabel = document.getElementById('timerLabel');
+
   const showSecsInput = document.getElementById('showSecs');
+  const playersCountInput = document.getElementById('playersCount');
+  const gameMinutesInput = document.getElementById('gameMinutes');
+
   const roundEl = document.getElementById('round');
-  const sI = document.getElementById('sI');
-  const sO = document.getElementById('sO');
   const cover = document.getElementById('cover');
   const coverTitle = document.getElementById('coverTitle');
   const revealBtn = document.getElementById('revealBtn');
@@ -188,12 +295,9 @@
   const passTitle = document.getElementById('passTitle');
   const passBtn = document.getElementById('passBtn');
   const wordlistEl = document.getElementById('wordlist');
-  const guessArea = document.getElementById('impostorGuessArea');
-  const guessInput = document.getElementById('guess');
-  const guessBtn = document.getElementById('guessBtn');
-  const result = document.getElementById('result');
+  const splash = document.getElementById('splash');
 
-  // --- Ukryta paczka prawdziwych rzeczowników (bazowa + dodatkowe) ---
+  // 🔹 Twoje własne słowa – W KLEJ TUTAJ (albo wpisuj w textarea w lobby)
   const baseWords = [
     "kot","pies","dom","drzewo","ogród","kwiat","pokój","kuchnia","łazienka","sypialnia",
     "stół","krzesło","okno","drzwi","klucz","zamek","szafa","półka","łóżko","biurko",
@@ -234,7 +338,19 @@
     "sport","mecz","boisko","bramka","piłka","rakieta","kij","siatka","sędzia",
     "zdrowie","choroba","tabletka","syrop","termometr","opatrunek","plaster","bandaż","apteczka","maska",
     "czas","chwila","minuta","godzina","dzień","tydzień","miesiąc","rok","kalendarz",
-    "pudełko","karton","opakowanie","taśma","nożyk","zszywacz","spinacz","koperta","znaczek"
+    "pudełko","karton","opakowanie","taśma","nożyk","zszywacz","spinacz","koperta","znaczek", "latarnia uliczna","kosz na śmieci","ławka parkowa","huśtawka","zjeżdżalnia","karuzela","piaskownica","skatepark","boisko sportowe","siłownia plenerowa",
+    "pływalnia","basen","sauna","jacuzzi","solarium","szatnia","prysznic","szafka na klucz","biletomat","automat do napojów",
+    "wieża","zamek obronny","ruiny","fort","bastion","mur obronny","fosy","most zwodzony","brama miejska","kaplica",
+    "katedra","kościół","cerkiew","synagoga","meczet","pagoda","klasztor","opactwo","kapliczka","ołtarz",
+    "góra lodowa","fiord","klif","laguna","wulkan","krater","gejzer","gorące źródło","jaskinia lodowa","lodowiec",
+    "dron","helikopter","balon","sterowiec","paralotnia","lotnia","spadochron","motolotnia","trajkotka","poduszkowiec",
+    "mikroskop","kamera termowizyjna","kamera sportowa","kamera przemysłowa","czujnik","detektor","alarm","syrena","monitoring","panel sterowania",
+    "wózek widłowy","podnośnik","dźwig","żuraw","taśmociąg","winda","schody ruchome","rampa","podest","przenośnik",
+    "wrotki","rolki","deskorolka","snowboard","narty","kijki narciarskie","łyżwy","kask","ochraniacze","kamizelka asekuracyjna",
+    "browar","winiarnia","piwnica","składzik","magazyn","hala","pawilon","wiata","szopa","altana",
+    "wiatrak","turbina","elektrownia wiatrowa","elektrownia słoneczna","panel fotowoltaiczny","bateria słoneczna","kolektor","akumulator","transformator","stacja transformatorowa"
+
+    
   ];
 
   const extraWords = [
@@ -277,30 +393,88 @@
     "anorak","bezrękawnik","pas","sakwa"
   ];
 
-  const hiddenWords = (() => {
-    const set = new Set(
-      baseWords.concat(extraWords).map(w => (w || "").toString().trim()).filter(Boolean)
-    );
-    return Array.from(set);
-  })();
+  // STAN
+  let round = 0;
+  let secretWord = null, impostor = null;
+  let players = 4; let currentPlayer = 1; let revealed = {};
+  let timerInt = null, timeLeft = 0, totalTime = 15, inGame = false;
 
-  let round = 0; let scores = {I:0,O:0};
-  let secretWord = null; let impostor = null; let currentPlayer = 1; let revealed = {1:false,2:false,3:false,4:false};
-  let timerInt = null; let timeLeft = 0;
-  let inGame = false;
+  // Zegar gry (całkowity)
+  let gameTotalSec = 0, gameLeftSec = 0, gameInt = null, gameActive = false;
 
-  function buildPool(){
-    const user = wordlistEl.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    return (user.length ? user : []).concat(hiddenWords);
+  // TIMER (r=42)
+  const CIRC = 2*Math.PI*42;
+  function setArc(left, total, labelText){
+    const ratio = total>0 ? Math.max(0, Math.min(1, left/total)) : 0;
+    const offset = CIRC*(1 - ratio);
+    timerArc.setAttribute('stroke-dasharray', CIRC.toFixed(3));
+    timerArc.setAttribute('stroke-dashoffset', offset.toFixed(3));
+    timerLabel.textContent = labelText;
   }
-  function rnd(n){ return Math.floor(Math.random()*n); }
+  function timerReset(){ setArc(0,1,'—'); }
+  const fmtMMSS = s=>{
+    s = Math.max(0, s|0);
+    const m = Math.floor(s/60), sec = s%60;
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+
+  // PULA
+  function buildPool(){
+    const fromTextarea = wordlistEl.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const fromCode = baseWords.map(s=>String(s||'').trim()).filter(Boolean);
+    return [...new Set([...fromTextarea, ...fromCode])];
+  }
+  const rnd = n => Math.floor(Math.random()*n);
+  const clamp = (x,a,b)=> Math.max(a, Math.min(b, x));
+  const escapeHTML = s => s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;","&gt;":"&gt;","\"":"&quot;"}[c]));
+
+  // SPLASH
+  function playSplash(cb){
+    splash.classList.add('active');
+    setTimeout(()=>{
+      splash.classList.remove('active');
+      cb?.();
+    }, 2500);
+  }
+
+  // LOGIKA
+  function startGameClock(){
+    const mins = clamp(parseInt(gameMinutesInput.value)||15, 1, 240);
+    gameTotalSec = mins*60;
+    gameLeftSec = gameTotalSec;
+    gameActive = true;
+    clearInterval(gameInt);
+    gameInt = setInterval(()=>{
+      if (!gameActive) return;
+      gameLeftSec--;
+      if (gameLeftSec <= 0){
+        gameLeftSec = 0;
+        gameActive = false;
+        clearInterval(gameInt);
+        screenInner.innerHTML = `<div class="inProgress">Czas gry minął</div>`;
+        newRoundBtn.disabled = true;
+      }
+      if (isFinalPanel()){
+        setArc(gameLeftSec, gameTotalSec, fmtMMSS(gameLeftSec));
+      }
+    }, 1000);
+  }
+  function stopGameClock(){
+    gameActive = false;
+    clearInterval(gameInt);
+  }
+  function isFinalPanel(){
+    return screenInner.querySelector('.inProgress') !== null;
+  }
 
   function enterGame(){
     inGame = true;
     lobby.classList.add('hidden');
     game.classList.add('active');
     wordlistEl.setAttribute('disabled','disabled');
-    // przewiń do góry (iOS czasem zostawia pasek)
+    timerReset();
+    newRoundBtn.disabled = false;
+    startGameClock();
     window.scrollTo({top:0, behavior:"smooth"});
   }
   function exitGame(){
@@ -308,18 +482,32 @@
     lobby.classList.remove('hidden');
     game.classList.remove('active');
     wordlistEl.removeAttribute('disabled');
-    screen.innerHTML = 'Kliknij <b>Nowa runda</b>, aby wylosować hasło (to samo dla wszystkich nie-impostorów) i impostora.';
-    guessArea.style.display='none'; result.textContent='';
+    timerReset();
+    stopGameClock();
+    screenInner.innerHTML = 'Kliknij <b>Nowa runda</b>, aby wylosować hasło i impostora.';
   }
 
   function startRound(){
     if (!inGame) enterGame();
+
     const pool = buildPool();
+    if (!pool.length){
+      alert('Dodaj najpierw hasła (po jednym w linii).');
+      return;
+    }
+    if (!gameActive){
+      alert('Czas gry już minął. Zakończ grę lub ustaw nowy czas i rozpocznij ponownie.');
+      return;
+    }
+
     secretWord = pool[rnd(pool.length)];
-    impostor = rnd(4)+1;
-    currentPlayer = 1; revealed = {1:false,2:false,3:false,4:false};
-    round++; roundEl.textContent = round; result.textContent = ''; guessArea.style.display='none'; guessInput.value='';
-    screen.innerHTML = `Zaczynamy rundę. <b>Gracz ${currentPlayer}</b> przygotuj się.`;
+    players = clamp(parseInt(playersCountInput.value)||4, 3, 10);
+    impostor = rnd(players)+1;
+
+    currentPlayer = 1; revealed = {}; for(let i=1;i<=players;i++) revealed[i]=false;
+    round++; roundEl.textContent = round;
+
+    screenInner.innerHTML = `Zaczynamy rundę. <b>Gracz ${currentPlayer}/${players}</b> przygotuj się.`;
     showCoverFor(currentPlayer);
   }
 
@@ -330,55 +518,65 @@
 
   function revealFor(p){
     cover.style.display = 'none';
-    const secs = clamp(parseInt(showSecsInput.value)||15,5,60);
-    let content;
+    totalTime = clamp(parseInt(showSecsInput.value)||15, 5, 60);
+    timeLeft = totalTime;
+
+    let html;
     if (p === impostor){
-      content = `<div class="word danger">JESTEŚ IMPOSTOREM</div><div class="muted" style="margin-top:6px">Nie mów hasła. Spróbuj je odgadnąć po podpowiedziach innych. Masz <b>${secs}s</b>.</div>`;
+      html = `<div class="word danger">JESTEŚ IMPOSTOREM</div>
+              <div class="muted">Nie mów hasła. Spróbuj je odgadnąć po podpowiedziach innych.</div>`;
     } else {
-      content = `<div class="word">${escapeHTML(secretWord)}</div><div class="muted" style="margin-top:6px">Powiedz słowo podobne (bez zdradzania hasła). Masz <b>${secs}s</b>.</div>`;
+      html = `<div class="word">${escapeHTML(secretWord)}</div>
+              <div class="muted">Powiedz słowo podobne (bez zdradzania hasła).</div>`;
     }
-    content += `<div style="margin-top:12px; display:flex; gap:8px; justify-content:center">
-                  <button id="nextBtn" class="secondary">Next</button>
-                </div>`;
-    screen.innerHTML = content;
+    html += `<div style="margin-top:8px"><button id="nextBtn" class="secondary">Next</button></div>`;
+    screenInner.innerHTML = html;
+
+    // kołowy zegar w trybie sekund dla gracza
+    setArc(timeLeft, totalTime, `${timeLeft}s`);
+
     revealed[p] = true;
-    startCountdown(secs, p);
+    startCountdown(p);
 
     const nextBtn = document.getElementById('nextBtn');
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        clearInterval(timerInt);
-        hideAndPass(p);
-      });
-    }
+    nextBtn?.addEventListener('click', ()=>{
+      clearInterval(timerInt);
+      hideAndPass(p);
+    }, {once:true});
   }
 
-  function startCountdown(secs, p){
-    clearInterval(timerInt); timeLeft = secs; updateTimer();
+  function startCountdown(p){
+    clearInterval(timerInt);
     timerInt = setInterval(()=>{
-      timeLeft--; updateTimer();
+      timeLeft--;
+      setArc(timeLeft, totalTime, `${Math.max(0,timeLeft)}s`);
       if (timeLeft<=0){
         clearInterval(timerInt);
         hideAndPass(p);
       }
-    },1000);
-  }
-
-  function updateTimer(){
-    const t = `<div class="muted" style="margin-top:6px">Pozostało: <span class="timer">${timeLeft}s</span></div>`;
-    if (!screen.innerHTML.includes('Pozostało:')) screen.innerHTML += t; else {
-      screen.innerHTML = screen.innerHTML.replace(/(Pozostało: <span class="timer">)(\d+)(s<\/span>)/, `$1${Math.max(0,timeLeft)}$3`);
-    }
+    }, 1000);
   }
 
   function hideAndPass(p){
-    screen.innerHTML = `<div class="muted">Czas gracza ${p} minął (lub Next). Hasło zostało ukryte.</div>`;
-    const next = p<4? p+1 : null;
+    screenInner.innerHTML = `<div class="muted">Czas gracza ${p} minął (lub Next). Hasło zostało ukryte.</div>`;
+    setArc(0,1,'—');
+    const next = p < players ? p+1 : null;
     if (next){
-      passTitle.textContent = `Przekaż telefon Graczowi ${next}`; pass.style.display='flex';
+      passTitle.textContent = `Przekaż telefon Graczowi ${next}`;
+      pass.style.display='flex';
     } else {
-      guessArea.style.display = 'block';
-      screen.innerHTML = `<b>Koniec podpowiedzi.</b> Teraz impostor wpisuje zgadnięcie.`;
+      // KONIEC KOLEJKI — pokazujemy globalny zegar gry (MM:SS)
+      screenInner.innerHTML = `
+        <div class="inProgress">Gra trwa</div>
+        <div class="muted">Pozostały czas gry:</div>
+      `;
+      setArc(gameLeftSec, gameTotalSec, fmtMMSS(gameLeftSec));
+
+      const btn = document.createElement('button');
+      btn.className = 'primary';
+      btn.textContent = 'Rozpocznij od nowa rundę';
+      btn.addEventListener('click', ()=>{ startRound(); }, {once:true});
+      screenInner.appendChild(btn);
     }
   }
 
@@ -387,34 +585,16 @@
     currentPlayer = next; showCoverFor(currentPlayer);
   }
 
-  function clamp(x,a,b){ return Math.max(a, Math.min(b, x)); }
-  function escapeHTML(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
-
-  function handleGuess(){
-    const g = (guessInput.value||'').trim(); if (!g){ alert('Wpisz zgadnięcie.'); return; }
-    const ok = g.localeCompare(secretWord,'pl',{sensitivity:'base'})===0;
-    if (ok) { scores.I += 1; result.innerHTML = `<b class="ok">Impostor zgadł!</b> Hasło: <b>${escapeHTML(secretWord)}</b>`; }
-    else { scores.O += 1; result.innerHTML = `<b class="warn">Impostor nie trafił.</b> Twoje: <b>${escapeHTML(g)}</b> · Hasło: <b>${escapeHTML(secretWord)}</b>`; }
-    sI.textContent = scores.I; sO.textContent = scores.O;
-    secretWord = null; impostor = null; currentPlayer = 1;
-  }
-
-  // Zdarzenia
-  startBtn?.addEventListener('click', enterGame);
+  // --- Zdarzenia ---
+  startBtn?.addEventListener('click', ()=>{  // splash + wejście do gry
+    playSplash(enterGame);
+  });
   endGameBtn?.addEventListener('click', exitGame);
-  newRoundBtn.addEventListener('click', startRound);
-  revealBtn.addEventListener('click', ()=>{ revealFor(currentPlayer); });
-  passBtn.addEventListener('click', passToNext);
-  guessBtn.addEventListener('click', handleGuess);
+  newRoundBtn?.addEventListener('click', startRound);
+  revealBtn?.addEventListener('click', ()=>{ revealFor(currentPlayer); });
+  passBtn?.addEventListener('click', passToNext);
+
 })();
 </script>
-<script>
-    window.addEventListener('load', () => {
-      const cover = document.getElementById('cover');
-      const pass = document.getElementById('pass');
-      if (cover) cover.style.display = 'none';
-      if (pass) pass.style.display = 'none';
-    });
-    </script>
 </body>
 </html>
